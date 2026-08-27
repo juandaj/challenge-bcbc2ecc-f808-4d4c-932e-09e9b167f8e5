@@ -1,121 +1,84 @@
 # Implementación de monitoreo en un sistema de infraestructura distribuida
 
-El sistema de infraestructura distribuida de una empresa fintech necesita ser monitoreado para asegurar su rendimiento y disponibilidad. El equipo de DevOps ha identificado que es necesario implementar al menos dos de los tres pilares de monitoreo: Infraestructura, Log Management y APM. El objetivo es monitorear las métricas más impactantes para el negocio y garantizar la escalabilidad y fiabilidad del sistema.
+Solución del reto de **Pilares de Monitoreo** implementando dos pilares: **Infraestructura** y **APM**.
 
-## Informacion General
+## Arquitectura
 
-| Campo | Valor |
-|-------|-------|
-| **Tema** | Pilares de monitoreo |
-| **Nivel** | senior-l2 |
-| **Tipo** | practical |
-| **Tiempo estimado** | 4-5 horas |
+```text
+Host Linux -> Node Exporter ----\
+                                -> Prometheus -> Grafana
+Aplicación /metrics ------------/
+```
 
-## Fases del Reto
+## Componentes
 
-### Fase 0: Configuración del Proyecto
+- `app/`: aplicación Flask instrumentada con métricas Prometheus.
+- `prometheus/`: scraping y reglas de alertas.
+- `grafana/`: datasource y dashboard provisionados automáticamente.
+- `monitoreo-infraestructura/`: YAML requerido por el entregable de infraestructura.
+- `monitoreo-apm/`: YAML requerido por el entregable de APM.
+- `documentacion/`: selección de métricas, implementación y preguntas de sustentación.
 
-**Objetivo:** Obtener el proyecto base funcional enviando el Código Base a un asistente de IA, que lo analizará, corregirá errores y generará un ZIP listo para usar.
+## Ejecución
 
-**Tiempo estimado:** 15-30 minutos
+Requisitos: Docker y Docker Compose.
 
-**Instrucciones:**
+```bash
+docker compose up -d --build
+docker compose ps
+```
 
-- Asegúrate de tener instalado para ejecutar el proyecto: Un IDE o editor de código.
-- Copia todo el contenido del campo **Código Base** de este reto — incluyendo el texto de instrucciones que aparece al inicio.
-- Abre un asistente de IA (Claude en claude.ai, ChatGPT o Gemini — se recomienda Claude), pega el contenido copiado en el chat y envíalo.
-- El asistente analizará los archivos, corregirá errores y generará un archivo ZIP descargable. Descárgalo y extráelo en la carpeta donde quieras trabajar.
-- Verifica que el proyecto arranca sin errores.
+Servicios:
 
-**Entregable:** El proyecto compila/arranca sin errores.
+- Aplicación: http://localhost:8000
+- Métricas de aplicación: http://localhost:8000/metrics
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000 (`admin` / `admin`)
+- Node Exporter: http://localhost:9100/metrics
 
-<details>
-<summary>Pistas de conocimiento</summary>
+## Validación rápida
 
-- Copia el Código Base completo incluyendo el texto de instrucciones al inicio — esas instrucciones le indican al asistente exactamente qué hacer con los archivos.
-- Si el asistente no genera el ZIP automáticamente al terminar el análisis, escríbele: "genera el ZIP ahora".
-- Si el proyecto tiene errores al arrancar, comparte el mensaje de error con el mismo asistente para que lo corrija.
+1. En Prometheus abrir `Status -> Target health` y verificar los jobs `prometheus`, `infraestructura` y `apm` en estado **UP**.
+2. Generar tráfico:
 
-</details>
+```bash
+for i in $(seq 1 30); do curl -s http://localhost:8000/work > /dev/null; done
+for i in $(seq 1 5); do curl -s http://localhost:8000/error > /dev/null; done
+```
 
-### Fase 1: Exploración del sistema y definición de métricas
+3. Abrir Grafana y entrar a `Dashboards -> Assessment -> Assessment - Infraestructura y APM`.
+4. Revisar alertas en Prometheus en `Alerts`.
 
-**Objetivo:** Identificar las métricas más relevantes para el negocio y definir cómo se monitorearán.
+## Detener
 
-**Tiempo estimado:** 1 hora
+```bash
+docker compose down
+```
 
-**Instrucciones:**
+Para eliminar también los datos persistidos:
 
-- Analiza el sistema de infraestructura distribuida y determina cuáles son las métricas más críticas para el negocio.
-- Define al menos dos métricas que se monitorearán utilizando los pilares de monitoreo seleccionados.
+```bash
+docker compose down -v
+```
 
-**Entregable:** Documento con las métricas seleccionadas y la justificación de su elección.
+## Métricas principales
 
-<details>
-<summary>Pistas de conocimiento</summary>
+**Infraestructura:** CPU, memoria y disponibilidad.
 
-- Considera el impacto de cada métrica en el negocio y la escalabilidad del sistema.
-- Piensa en cómo los diferentes pilares de monitoreo pueden complementar cada uno.
+**APM:** throughput, tasa de errores 5xx, latencia p95 y disponibilidad.
 
-</details>
+## Evidencia y sustentación
 
-### Fase 2: Implementación del monitoreo de infraestructura
+La validación funcional está documentada en `documentacion/validacion-resultados.md` y las preguntas de preparación en `documentacion/preguntas-respuestas.md`.
 
-**Objetivo:** Implementar el monitoreo de la infraestructura utilizando uno de los pilares seleccionados.
+### Nota sobre permisos al extraer el ZIP
 
-**Tiempo estimado:** 2 horas
+Si Grafana inicia pero no provisiona el dashboard y sus logs muestran `permission denied` sobre `/etc/grafana/provisioning`, asegurar permisos de lectura/ejecución:
 
-**Instrucciones:**
+```bash
+find grafana -type d -exec chmod 755 {} \;
+find grafana -type f -exec chmod 644 {} \;
+docker compose restart grafana
+```
 
-- Selecciona uno de los pilares de monitoreo y diseña la implementación para monitorear la infraestructura.
-- Configura las herramientas necesarias para recopilar y visualizar las métricas seleccionadas.
-
-**Entregable:** Configuración y documentación de la implementación del monitoreo de infraestructura.
-
-<details>
-<summary>Pistas de conocimiento</summary>
-
-- Considera la escalabilidad y la fiabilidad del sistema al implementar el monitoreo.
-- Piensa en cómo puedes aprovechar las herramientas disponibles para recopilar y visualizar las métricas.
-
-</details>
-
-### Fase 3: Implementación del monitoreo de APM
-
-**Objetivo:** Implementar el monitoreo de APM utilizando uno de los pilares seleccionados.
-
-**Tiempo estimado:** 2 horas
-
-**Instrucciones:**
-
-- Selecciona uno de los pilares de monitoreo y diseña la implementación para monitorear las transacciones y rendimiento de las aplicaciones.
-- Configura las herramientas necesarias para recopilar y visualizar las métricas seleccionadas.
-
-**Entregable:** Configuración y documentación de la implementación del monitoreo de APM.
-
-<details>
-<summary>Pistas de conocimiento</summary>
-
-- Considera el impacto de las métricas en el rendimiento y la disponibilidad de las aplicaciones.
-- Piensa en cómo puedes aprovechar las herramientas disponibles para recopilar y visualizar las métricas.
-
-</details>
-
-## Dimensiones Evaluadas
-
-- **queEs**: ¿Qué son los pilares de monitoreo y por qué son importantes para el sistema?
-- **paraQueSirve**: ¿Para qué sirven las métricas seleccionadas en el contexto del negocio?
-- **comoSeUsa**: ¿Cómo se implementa el monitoreo de infraestructura y APM utilizando los pilares seleccionados?
-- **erroresComunes**: ¿Cuáles son los errores comunes al implementar el monitoreo y cómo se pueden evitar?
-- **queDecisionesImplica**: ¿Qué decisiones implica la selección de los pilares de monitoreo y las métricas?
-
-## Criterios de Evaluacion
-
-- Identificación de las métricas más relevantes para el negocio.
-- Implementación del monitoreo de infraestructura utilizando uno de los pilares seleccionados.
-- Implementación del monitoreo de APM utilizando uno de los pilares seleccionados.
-- Documentación clara y completa de las implementaciones.
-
----
-
-*Reto generado automaticamente por Challenge Generator - Pragma*
+En producción no se deben conservar las credenciales `admin/admin`; se usan aquí únicamente para simplificar la demostración local.
